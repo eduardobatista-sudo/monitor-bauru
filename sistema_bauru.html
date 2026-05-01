@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supervisor Bauru - Envio de Demandas</title>
+    <style>
+        :root { --primary: #0056b3; --warning: #ffc107; --danger: #dc3545; --success: #28a745; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 15px; display: flex; flex-direction: column; align-items: center; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 450px; margin-bottom: 20px; }
+        label { font-size: 13px; font-weight: bold; display: block; margin-top: 10px; }
+        input, select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #bdc3c7; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        .btn-link { background: var(--success); color: white; }
+        .reparo-ativo { background: white; border-left: 10px solid var(--success); padding: 20px; border-radius: 12px; width: 100%; max-width: 450px; text-align: center; }
+        .aviso-1h { border-left-color: var(--warning) !important; background: #fffde7 !important; animation: pulse 2s infinite; }
+        .vencido { border-left-color: var(--danger) !important; background: #fdecea !important; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+    </style>
+</head>
+<body>
+
+<!-- PAINEL DO SUPERVISOR -->
+<div id="painelSupervisor" class="card">
+    <h2>Painel do Supervisor</h2>
+    <label>Técnico:</label>
+    <input type="text" id="sup_tecnico">
+    <label>Ocorrência:</label>
+    <input type="text" id="sup_id">
+    <label>Tipo:</label>
+    <select id="sup_tipo">
+        <option>Corte por terceiros</option><option>Furto</option>
+        <option>Carga alta</option><option>Vandalismo</option><option>Queda de arvore</option>
+    </select>
+    <label>Prazo Final:</label>
+    <input type="time" id="sup_prazo">
+    <button class="btn-link" onclick="gerarLink()">GERAR LINK PARA WHATSAPP</button>
+    <p id="linkGerado" style="font-size: 11px; word-break: break-all; margin-top: 10px; color: blue;"></p>
+</div>
+
+<!-- TELA DO TÉCNICO (SÓ APARECE SE TIVER DADOS NO LINK) -->
+<div id="telaTecnico" class="reparo-ativo" style="display:none;">
+    <h2 id="t_status">Aguardando...</h2>
+    <hr>
+    <p><strong>Técnico:</strong> <span id="t_nome"></span></p>
+    <p><strong>Ocorrência:</strong> <span id="t_id"></span></p>
+    <p><strong>Motivo:</strong> <span id="t_tipo"></span></p>
+    <p><strong>Vence às:</strong> <span id="t_hora"></span></p>
+    <div id="t_timer" style="font-size: 24px; font-weight: bold; color: var(--danger);"></div>
+</div>
+
+<script>
+    // Função para o Supervisor gerar o link
+    function gerarLink() {
+        const t = document.getElementById('sup_tecnico').value;
+        const id = document.getElementById('sup_id').value;
+        const tipo = document.getElementById('sup_tipo').value;
+        const p = document.getElementById('sup_prazo').value;
+        
+        const urlBase = window.location.href.split('?')[0];
+        const linkFinal = `${urlBase}?t=${encodeURIComponent(t)}&id=${encodeURIComponent(id)}&tipo=${encodeURIComponent(tipo)}&p=${p}`;
+        
+        document.getElementById('linkGerado').innerText = "Link pronto! Copie e envie: " + linkFinal;
+        alert("Link gerado! Você pode copiar o endereço da barra do navegador agora ou o texto abaixo.");
+    }
+
+    // Função para o Técnico ler o link
+    function carregarDadosTecnico() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('t')) {
+            document.getElementById('painelSupervisor').style.display = 'none';
+            document.getElementById('telaTecnico').style.display = 'block';
+            
+            const t = params.get('t');
+            const id = params.get('id');
+            const tipo = params.get('tipo');
+            const p = params.get('p');
+
+            document.getElementById('t_nome').innerText = t;
+            document.getElementById('t_id').innerText = id;
+            document.getElementById('t_tipo').innerText = tipo;
+            document.getElementById('t_hora').innerText = p;
+
+            setInterval(() => {
+                const agora = new Date();
+                const [h, m] = p.split(':');
+                const dataPrazo = new Date();
+                dataPrazo.setHours(h, m, 0);
+                
+                const diffMin = Math.floor((dataPrazo - agora) / 60000);
+                const tela = document.getElementById('telaTecnico');
+
+                if (diffMin <= 0) {
+                    document.getElementById('t_timer').innerText = "PRAZO VENCIDO!";
+                    tela.className = "reparo-ativo vencido";
+                } else {
+                    document.getElementById('t_timer').innerText = `Restam ${diffMin} min`;
+                    if (diffMin <= 60) {
+                        tela.className = "reparo-ativo aviso-1h";
+                        if (diffMin % 10 === 0) { /* Alerta sonoro aqui */ }
+                    }
+                }
+            }, 1000);
+        }
+    }
+
+    window.onload = carregarDadosTecnico;
+</script>
+</body>
+</html>
